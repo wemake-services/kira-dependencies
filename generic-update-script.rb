@@ -132,6 +132,7 @@ dependencies.select(&:top_level?).each do |dep|
   ########################################
   # Create a pull request for the update #
   ########################################
+  assignee = ENV['DEPENDABOT_ASSIGNEE_GITLAB_ID']
   pr_creator = Dependabot::PullRequestCreator.new(
     source: source,
     base_commit: commit,
@@ -139,6 +140,7 @@ dependencies.select(&:top_level?).each do |dep|
     files: updated_files,
     credentials: credentials,
     label_language: true,
+    assignees: [assignee]
   )
   pull_request = pr_creator.create
   puts " submitted"

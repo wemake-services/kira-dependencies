@@ -10,7 +10,7 @@
 # * Set in the schedule required variables
 #
 #     PROJECT_PATH = group/repository
-#     DEPENDABOT_PACKAGE_MANAGER_SET = bundler,composer,npm_and_yarn
+#     PACKAGE_MANAGER_SET = bundler,composer,npm_and_yarn
 #
 # https://github.com/dependabot/dependabot-script
 # https://docs.gitlab.com/ee/ci/yaml/
@@ -32,88 +32,88 @@ bundler:
   extends: .dependabot
   only:
     variables:
-      - $DEPENDABOT_PACKAGE_MANAGER_SET =~ /\bbundler\b/
+      - $PACKAGE_MANAGER_SET =~ /\bbundler\b/
 
 pip:
   extends: .dependabot
   only:
     variables:
-      - $DEPENDABOT_PACKAGE_MANAGER_SET =~ /\bpip\b/
+      - $PACKAGE_MANAGER_SET =~ /\bpip\b/
 
 npm_and_yarn:
   extends: .dependabot
   only:
     variables:
-      - $DEPENDABOT_PACKAGE_MANAGER_SET =~ /(\bnpm|yarn\b)/
+      - $PACKAGE_MANAGER_SET =~ /(\bnpm|yarn\b)/
 
 maven:
   extends: .dependabot
   only:
     variables:
-      - $DEPENDABOT_PACKAGE_MANAGER_SET =~ /\bmaven\b/
+      - $PACKAGE_MANAGER_SET =~ /\bmaven\b/
 
 gradle:
   extends: .dependabot
   only:
     variables:
-      - $DEPENDABOT_PACKAGE_MANAGER_SET =~ /\bgradle\b/
+      - $PACKAGE_MANAGER_SET =~ /\bgradle\b/
 
 cargo:
   extends: .dependabot
   only:
     variables:
-      - $DEPENDABOT_PACKAGE_MANAGER_SET =~ /\bcargo\b/
+      - $PACKAGE_MANAGER_SET =~ /\bcargo\b/
 
 hex:
   extends: .dependabot
   only:
     variables:
-      - $DEPENDABOT_PACKAGE_MANAGER_SET =~ /\bhex\b/
+      - $PACKAGE_MANAGER_SET =~ /\bhex\b/
 
 composer:
   extends: .dependabot
   only:
     variables:
-      - $DEPENDABOT_PACKAGE_MANAGER_SET =~ /\bcomposer\b/
+      - $PACKAGE_MANAGER_SET =~ /\bcomposer\b/
 
 nuget:
   extends: .dependabot
   only:
     variables:
-      - $DEPENDABOT_PACKAGE_MANAGER_SET =~ /\bnuget\b/
+      - $PACKAGE_MANAGER_SET =~ /\bnuget\b/
 
 dep:
   extends: .dependabot
   only:
     variables:
-      - $DEPENDABOT_PACKAGE_MANAGER_SET =~ /\bdep\b/
+      - $PACKAGE_MANAGER_SET =~ /\bdep\b/
 
 go_modules:
   extends: .dependabot
   only:
     variables:
-      - $DEPENDABOT_PACKAGE_MANAGER_SET =~ /\bgo_modules\b/
+      - $PACKAGE_MANAGER_SET =~ /\bgo_modules\b/
 
 elm:
   extends: .dependabot
   only:
     variables:
-      - $DEPENDABOT_PACKAGE_MANAGER_SET =~ /\belm\b/
+      - $PACKAGE_MANAGER_SET =~ /\belm\b/
 
 submodules:
   extends: .dependabot
   only:
     variables:
-      - $DEPENDABOT_PACKAGE_MANAGER_SET =~ /\bsubmodules\b/
+      - $PACKAGE_MANAGER_SET =~ /\bsubmodules\b/
 
 docker:
   extends: .dependabot
   only:
     variables:
-      - $DEPENDABOT_PACKAGE_MANAGER_SET =~ /\bdocker\b/
+      - $PACKAGE_MANAGER_SET =~ /\bdocker\b/
 
 terraform:
   extends: .dependabot
   only:
     variables:
-      - $DEPENDABOT_PACKAGE_MANAGER_SET =~ /\bterraform\b/
+      - $PACKAGE_MANAGER_SET =~ /\bterraform\b/

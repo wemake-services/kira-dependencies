@@ -33,7 +33,7 @@ directory = "/"
 # Works best with marge-bot:
 # https://github.com/smarkets/marge-bot
 assignee = ENV['DEPENDABOT_ASSIGNEE_GITLAB_ID']
-package_manager = "bundler"
+package_manager = ENV["PACKAGE_MANAGER"] || "bundler"
 
 source = Dependabot::Source.new(
   provider: "gitlab",

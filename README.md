@@ -28,8 +28,9 @@ This is a global configuration that you should setup inside your CI variables.
 
 This configuration is best to be setup inside CI schedule's environment.
 
+- `PACKAGE_MANAGER_SET` - magic variable, package managers to be updated, eg: `npm pip docker`
 - `DEPENDABOT_PROJECT_PATH` - project to be updated, eg: `wemake-services/kira-dependencies`
-- `DEPENDABOT_PACKAGE_MANAGER_SET` - package managers to be updated, eg: `npm pip docker`
+- `DEPENDABOT_DIRECTORY` - directory to look for package file, defaults to `/`
 - `DEPENDABOT_ASSIGNEE_GITLAB_ID` - (optional) Gitlab user id to assign to merge requests
 - `DEPENDABOT_GITLAB_APPROVE_MERGE` - (optional) setup to `true` if you want our bot to approve your merge requests
 - `DEPENDABOT_GITLAB_AUTO_MERGE` - (optional) setup to `true` if you want to auto merge this request

@@ -27,12 +27,12 @@ credentials = [
 repo_name = ENV["DEPENDABOT_PROJECT_PATH"] # namespace/project
 
 # Directory where the base dependency files are.
-directory = "/"
+directory = ENV["DEPENDABOT_DIRECTORY"] || "/"
 
 # Assignee to be set for this merge request.
 # Works best with marge-bot:
 # https://github.com/smarkets/marge-bot
-assignee = ENV['DEPENDABOT_ASSIGNEE_GITLAB_ID']
+assignee = ENV["DEPENDABOT_ASSIGNEE_GITLAB_ID"]
 package_manager = ENV["PACKAGE_MANAGER"] || "bundler"
 
 source = Dependabot::Source.new(
@@ -119,7 +119,7 @@ dependencies.select(&:top_level?).each do |dep|
     credentials: credentials,
     label_language: true,
     assignees: [assignee],
-    reviewers: [assignee]
+    reviewers: {"approvers" => [assignee]}
   )
   pull_request = pr_creator.create
   puts " submitted"

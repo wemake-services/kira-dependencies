@@ -21,8 +21,8 @@ for each project that you want to enable.
 
 This is a global configuration that you should setup inside your CI variables.
 
-- `GITLAB_HOSTNAME`
-- `KIRA_GITLAB_PERSONAL_TOKEN`
+- `KIRA_GITLAB_PERSONAL_TOKEN` - personal access token for your bot user
+- `GITLAB_HOSTNAME` - (optional) Gitlab domain name, defaults to `gitlab.com`
 
 ### Per schedule
 

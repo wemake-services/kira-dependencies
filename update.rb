@@ -15,45 +15,25 @@ require "gitlab"
 credentials = [
   {
     "type" => "git_source",
-    "host" => "github.com",
+    "host" => gitlab_hostname,
     "username" => "x-access-token",
-    "password" => ENV["GITHUB_ACCESS_TOKEN"]
+    # A GitLab access token with API permission
+    "password" => ENV["KIRA_GITLAB_PERSONAL_TOKEN"]
   }
 ]
 
 # Full name of the repo you want to create pull requests for.
-repo_name = ENV["PROJECT_PATH"] # namespace/project
+repo_name = ENV["DEPENDABOT_PROJECT_PATH"] # namespace/project
 
 # Directory where the base dependency files are.
 directory = "/"
 
-# Name of the package manager you'd like to do the update for. Options are:
-# - bundler
-# - pip (includes pipenv)
-# - npm_and_yarn
-# - maven
-# - gradle
-# - cargo
-# - hex
-# - composer
-# - nuget
-# - dep
-# - go_modules
-# - elm
-# - submodules
-# - docker
-# - terraform
-package_manager = ENV["PACKAGE_MANAGER"] || "bundler"
-
+# Assignee to be set for this merge request.
+# Works best with marge-bot:
+# https://github.com/smarkets/marge-bot
+assignee = ENV['DEPENDABOT_ASSIGNEE_GITLAB_ID']
 gitlab_hostname = ENV["GITLAB_HOSTNAME"] || "gitlab.com"
-
-credentials << {
-  "type" => "git_source",
-  "host" => gitlab_hostname,
-  "username" => "x-access-token",
-  # A GitLab access token with API permission
-  "password" => ENV["GITLAB_ACCESS_TOKEN"]
-}
+package_manager = "bundler"
 
 source = Dependabot::Source.new(
   provider: "gitlab",
@@ -63,7 +43,6 @@ source = Dependabot::Source.new(
   directory: directory,
   branch: nil,
 )
-
 
 ##############################
 # Fetch the dependency files #
@@ -132,7 +111,6 @@ dependencies.select(&:top_level?).each do |dep|
   ########################################
   # Create a pull request for the update #
   ########################################
-  assignee = ENV['DEPENDABOT_ASSIGNEE_GITLAB_ID']
   pr_creator = Dependabot::PullRequestCreator.new(
     source: source,
     base_commit: commit,
@@ -140,20 +118,27 @@ dependencies.select(&:top_level?).each do |dep|
     files: updated_files,
     credentials: credentials,
     label_language: true,
-    assignees: [assignee]
+    assignees: [assignee],
+    reviewers: [assignee]
   )
   pull_request = pr_creator.create
   puts " submitted"
 
   next unless pull_request
 
+  g = Gitlab.client(
+    endpoint: source.api_endpoint,
+    private_token: ENV["GITLAB_ACCESS_TOKEN"]
+  )
+
+  # Auto approve Gitlab merge request with the same user.
+  if ENV["DEPENDABOT_GITLAB_APPROVE_MERGE"]
+    g.approve_merge_request(source.repo, pull_request.iid)
+  end
+
   # Enable GitLab "merge when pipeline succeeds" feature.
   # Merge requests created and successfully tested will be merge automatically.
-  if ENV["GITLAB_AUTO_MERGE"]
-    g = Gitlab.client(
-      endpoint: source.api_endpoint,
-      private_token: ENV["GITLAB_ACCESS_TOKEN"]
-    )
+  if ENV["DEPENDABOT_GITLAB_AUTO_MERGE"]
     g.accept_merge_request(
       source.repo,
       pull_request.iid,

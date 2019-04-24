@@ -12,6 +12,7 @@ require "dependabot/pull_request_creator"
 require "dependabot/omnibus"
 require "gitlab"
 
+gitlab_hostname = ENV["GITLAB_HOSTNAME"] || "gitlab.com"
 credentials = [
   {
     "type" => "git_source",
@@ -32,7 +33,6 @@ directory = "/"
 # Works best with marge-bot:
 # https://github.com/smarkets/marge-bot
 assignee = ENV['DEPENDABOT_ASSIGNEE_GITLAB_ID']
-gitlab_hostname = ENV["GITLAB_HOSTNAME"] || "gitlab.com"
 package_manager = "bundler"
 
 source = Dependabot::Source.new(

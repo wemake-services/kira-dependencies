@@ -119,7 +119,7 @@ dependencies.select(&:top_level?).each do |dep|
     credentials: credentials,
     label_language: true,
     assignees: [assignee],
-    reviewers: {"approvers" => [assignee]}
+    reviewers: {"approvers" => [assignee], "approver_groups" => []}
   )
   pull_request = pr_creator.create
   puts " submitted"

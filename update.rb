@@ -16,12 +16,19 @@ gitlab_hostname = ENV["GITLAB_HOSTNAME"] || "gitlab.com"
 credentials = [
   {
     "type" => "git_source",
-    "host" => gitlab_hostname,
+    "host" => "github.com",
     "username" => "x-access-token",
-    # A GitLab access token with API permission
-    "password" => ENV["KIRA_GITLAB_PERSONAL_TOKEN"]
+    "password" => nil
   }
 ]
+
+credentials << {
+  "type" => "git_source",
+  "host" => gitlab_hostname,
+  "username" => "x-access-token",
+  # A GitLab access token with API permission
+  "password" => ENV["KIRA_GITLAB_PERSONAL_TOKEN"]
+}
 
 # Full name of the repo you want to create pull requests for.
 repo_name = ENV["DEPENDABOT_PROJECT_PATH"] # namespace/project
@@ -133,6 +140,7 @@ dependencies.select(&:top_level?).each do |dep|
   # Auto approve Gitlab merge request with the same user.
   if ENV["DEPENDABOT_GITLAB_APPROVE_MERGE"]
     g.approve_merge_request(source.repo, pull_request.iid)
+    puts " approved"
   end
 
   # Enable GitLab "merge when pipeline succeeds" feature.
@@ -144,6 +152,8 @@ dependencies.select(&:top_level?).each do |dep|
       merge_when_pipeline_succeeds: true,
       should_remove_source_branch: true
     )
+
+    puts " set to be accepted"
   end
 end
 

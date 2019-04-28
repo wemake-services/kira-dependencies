@@ -127,7 +127,7 @@ dependencies.select(&:top_level?).each do |dep|
 
   g = Gitlab.client(
     endpoint: source.api_endpoint,
-    private_token: ENV["GITLAB_ACCESS_TOKEN"]
+    private_token: ENV["KIRA_GITLAB_PERSONAL_TOKEN"]
   )
 
   # Auto approve Gitlab merge request with the same user.

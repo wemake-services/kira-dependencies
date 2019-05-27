@@ -23,6 +23,7 @@ This is a global configuration that you should setup inside your CI variables.
 
 - `KIRA_GITLAB_PERSONAL_TOKEN` - personal access token for your bot user
 - `GITLAB_HOSTNAME` - (optional) Gitlab domain name, defaults to `gitlab.com`
+- `KIRA_GITHUB_PERSONAL_TOKEN` - Github personal access token to avoid hitting rate limit
 
 ### Per schedule
 

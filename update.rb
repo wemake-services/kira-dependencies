@@ -18,7 +18,7 @@ credentials = [
     "type" => "git_source",
     "host" => "github.com",
     "username" => "x-access-token",
-    "password" => nil
+    "password" => ENV["KIRA_GITHUB_PERSONAL_TOKEN"] || nil
   }
 ]
 

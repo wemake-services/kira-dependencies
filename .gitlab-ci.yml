@@ -43,7 +43,7 @@ pip:
 npm_and_yarn:
   extends: .dependabot
   variables:
-    DEPENDABOT_UPDATE_STRATEGY: 'bump_version'
+    DEPENDABOT_UPDATE_STRATEGY: 'bump_versions'
   only:
     variables:
       - $PACKAGE_MANAGER_SET =~ /(\bnpm|yarn\b)/

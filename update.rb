@@ -83,6 +83,9 @@ dependencies.select(&:top_level?).each do |dep|
     dependency: dep,
     dependency_files: files,
     credentials: credentials,
+    # See lists of update strategies here:
+    # https://github.com/wemake-services/kira-dependencies/issues/39
+    requirements_update_strategy: ENV['DEPENDABOT_UPDATE_STRATEGY'] || nil
   )
 
   next if checker.up_to_date?

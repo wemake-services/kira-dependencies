@@ -35,3 +35,7 @@ This configuration is best to be setup inside CI schedule's environment.
 - `DEPENDABOT_ASSIGNEE_GITLAB_ID` - (optional) Gitlab user id to assign to merge requests
 - `DEPENDABOT_GITLAB_APPROVE_MERGE` - (optional) setup to `true` if you want our bot to approve your merge requests
 - `DEPENDABOT_GITLAB_AUTO_MERGE` - (optional) setup to `true` if you want to auto merge this request
+
+### Per package manager
+
+- `DEPENDABOT_UPDATE_STRATEGY` - (optional) change how each package manager updates your dependency versions, see list of allowed values [here](https://github.com/wemake-services/kira-dependencies/issues/39)

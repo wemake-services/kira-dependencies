@@ -38,7 +38,7 @@ directory = ENV["DEPENDABOT_DIRECTORY"] || "/"
 
 # See lists of update strategies here:
 # https://github.com/wemake-services/kira-dependencies/issues/39
-update_strategy = ENV['DEPENDABOT_UPDATE_STRATEGY'].to_sym || nil
+update_strategy = ENV['DEPENDABOT_UPDATE_STRATEGY']&.to_sym || nil
 
 # Assignee to be set for this merge request.
 # Works best with marge-bot:

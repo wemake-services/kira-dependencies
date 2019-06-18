@@ -4,6 +4,7 @@
 # It is intended to be used as a stop-gap until Dependabot's hosted instance
 # supports GitHub Enterprise and GitLab (coming soon!)
 
+require "json"
 require "dependabot/file_fetchers"
 require "dependabot/file_parsers"
 require "dependabot/update_checkers"
@@ -29,6 +30,12 @@ credentials << {
   # A GitLab access token with API permission
   "password" => ENV["KIRA_GITLAB_PERSONAL_TOKEN"]
 }
+
+json_credentials = ENV['DEPENDABOT_EXTRA_CREDENTIALS'] || ""
+unless json_credentials.to_s.strip.empty?
+  json_credentials = JSON.parse(json_credentials)
+  credentials.push(*json_credentials)
+end
 
 # Full name of the repo you want to create pull requests for.
 repo_name = ENV["DEPENDABOT_PROJECT_PATH"] # namespace/project

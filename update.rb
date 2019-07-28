@@ -127,6 +127,27 @@ dependencies.select(&:top_level?).each do |dep|
 
   updated_files = updater.updated_dependency_files
 
+  g = Gitlab.client(
+    endpoint: source.api_endpoint,
+    private_token: ENV["KIRA_GITLAB_PERSONAL_TOKEN"]
+  )
+
+  # Is there an open MR for
+  # If so, close it
+  open_merge_requests = g.merge_requests(repo_name, state: "opened")
+  open_merge_requests.each do |omr|
+    title = omr.title
+    if title.include?(dep.name) && title.include?(dep.version) && !title.include?(updated_deps.first.version)
+
+      # close the merge request
+      g.update_merge_request(repo_name, omr.iid, {state_event: "close"})
+      puts "closed ##{omr.iid}"
+
+      # delete the branch
+      g.delete_branch(repo_name, omr.source_branch)
+    end
+  end
+
   ########################################
   # Create a pull request for the update #
   ########################################
@@ -143,11 +164,6 @@ dependencies.select(&:top_level?).each do |dep|
   puts " submitted"
 
   next unless pull_request
-
-  g = Gitlab.client(
-    endpoint: source.api_endpoint,
-    private_token: ENV["KIRA_GITLAB_PERSONAL_TOKEN"]
-  )
 
   # Auto approve Gitlab merge request with the same user.
   if ENV["DEPENDABOT_GITLAB_APPROVE_MERGE"]

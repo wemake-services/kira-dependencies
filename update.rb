@@ -132,8 +132,7 @@ dependencies.select(&:top_level?).each do |dep|
     private_token: ENV["KIRA_GITLAB_PERSONAL_TOKEN"]
   )
 
-  # Is there an open MR for
-  # If so, close it
+  # Is there an open MR for this dependency version, then close it
   open_merge_requests = g.merge_requests(repo_name, state: "opened")
   open_merge_requests.each do |omr|
     title = omr.title

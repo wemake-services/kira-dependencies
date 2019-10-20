@@ -53,13 +53,16 @@ update_strategy = ENV['DEPENDABOT_UPDATE_STRATEGY']&.to_sym || nil
 assignee = ENV["DEPENDABOT_ASSIGNEE_GITLAB_ID"]
 package_manager = ENV["PACKAGE_MANAGER"] || "bundler"
 
+# Source branch for merge requests
+source_branch = ENV["DEPENDABOT_SOURCE_BRANCH"] || "master"
+
 source = Dependabot::Source.new(
   provider: "gitlab",
   hostname: gitlab_hostname,
   api_endpoint: "https://#{gitlab_hostname}/api/v4",
   repo: repo_name,
   directory: directory,
-  branch: nil,
+  branch: source_branch,
 )
 
 ##############################

@@ -50,7 +50,9 @@ update_strategy = ENV['DEPENDABOT_UPDATE_STRATEGY']&.to_sym || nil
 # Assignee to be set for this merge request.
 # Works best with marge-bot:
 # https://github.com/smarkets/marge-bot
-assignee = ENV["DEPENDABOT_ASSIGNEE_GITLAB_ID"]
+assignees = [ENV["DEPENDABOT_ASSIGNEE_GITLAB_ID"]].compact
+assignees = nil if assignees.empty?
+
 package_manager = ENV["PACKAGE_MANAGER"] || "bundler"
 
 # Source branch for merge requests
@@ -160,7 +162,7 @@ dependencies.select(&:top_level?).each do |dep|
     files: updated_files,
     credentials: credentials,
     label_language: true,
-    assignees: [assignee].compact
+    assignees: assignees
   )
   pull_request = pr_creator.create
   puts " submitted"

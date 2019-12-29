@@ -160,7 +160,7 @@ dependencies.select(&:top_level?).each do |dep|
     files: updated_files,
     credentials: credentials,
     label_language: true,
-    assignees: [assignee]
+    assignees: [assignee].compact
   )
   pull_request = pr_creator.create
   puts " submitted"

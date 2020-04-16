@@ -56,7 +56,7 @@ assignees = nil if assignees.empty?
 package_manager = ENV["PACKAGE_MANAGER"] || "bundler"
 
 # Source branch for merge requests
-source_branch = ENV["DEPENDABOT_SOURCE_BRANCH"] || "master"
+source_branch = ENV["DEPENDABOT_SOURCE_BRANCH"] || nil
 
 source = Dependabot::Source.new(
   provider: "gitlab",

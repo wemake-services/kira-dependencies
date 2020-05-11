@@ -90,8 +90,14 @@ parser = Dependabot::FileParsers.for_package_manager(package_manager).new(
 )
 
 dependencies = parser.parse
-
+opened_merge_requests = 0
 dependencies.select(&:top_level?).each do |dep|
+
+  if ENV["DEPENDABOT_MAX_MERGE_REQUESTS"] && opened_merge_requests >= ENV["DEPENDABOT_MAX_MERGE_REQUESTS"].to_i
+    puts "Opened merge request limit reached!"
+    break
+  end
+
   #########################################
   # Get update details for the dependency #
   #########################################
@@ -138,8 +144,13 @@ dependencies.select(&:top_level?).each do |dep|
   )
 
   # Is there an open MR for this dependency version, then close it
-  open_merge_requests = g.merge_requests(repo_name, state: "opened")
-  open_merge_requests.each do |omr|
+  opened_merge_requests_for_this_dep = g.merge_requests(
+    repo_name,
+    state: "opened",
+    search: dep.name,
+    in: "title",
+  )
+  opened_merge_requests_for_this_dep.each do |omr|
     title = omr.title
     if title.include?(dep.name) && title.include?(dep.version) && !title.include?(updated_deps.first.version)
 
@@ -166,6 +177,8 @@ dependencies.select(&:top_level?).each do |dep|
   )
   pull_request = pr_creator.create
   puts " submitted"
+
+  opened_merge_requests += 1
 
   next unless pull_request
 

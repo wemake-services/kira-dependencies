@@ -10,6 +10,7 @@ require "dependabot/file_parsers"
 require "dependabot/update_checkers"
 require "dependabot/file_updaters"
 require "dependabot/pull_request_creator"
+require "dependabot/pull_request_updater"
 require "dependabot/omnibus"
 require "gitlab"
 
@@ -138,48 +139,75 @@ dependencies.select(&:top_level?).each do |dep|
 
   updated_files = updater.updated_dependency_files
 
-  g = Gitlab.client(
-    endpoint: source.api_endpoint,
-    private_token: ENV["KIRA_GITLAB_PERSONAL_TOKEN"]
+  #####################################
+  # Find out if a MR already exists   #
+  #####################################
+  gitlab_client = Dependabot::Clients::GitlabWithRetries.for_source(
+    source: source,
+    credentials: credentials
   )
 
-  # Is there an open MR for this dependency version, then close it
-  opened_merge_requests_for_this_dep = g.merge_requests(
+  opened_merge_requests_for_this_dep = gitlab_client.merge_requests(
     repo_name,
     state: "opened",
     search: dep.name,
     in: "title",
   )
+  conflict_merge_request_commit_id = nil
+  conflict_merge_request_id = nil
   opened_merge_requests_for_this_dep.each do |omr|
     title = omr.title
-    if title.include?(dep.name) && title.include?(dep.version) && !title.include?(updated_deps.first.version)
-
-      # close the merge request
-      g.update_merge_request(repo_name, omr.iid, {state_event: "close"})
-      puts "closed ##{omr.iid}"
-
-      # delete the branch
-      g.delete_branch(repo_name, omr.source_branch)
+    if title.include?(dep.name) && title.include?(dep.version)
+      if !title.include?(updated_deps[0].version)
+        # close old version MR
+        gitlab_client.update_merge_request(repo_name, omr.iid, {state_event: "close"})
+        gitlab_client.delete_branch(repo_name, omr.source_branch)
+        puts " closed merge request ##{omr.iid}"
+      end
+      if ["cannot_be_merged", "checking"].include? omr.merge_status
+        # ignore merge request manually touched
+        next if gitlab_client.merge_request_commits(repo_name, omr.iid).length > 1
+        # keep merge request
+        conflict_merge_request_commit_id = omr.sha
+        conflict_merge_request_id = omr.iid
+        break
+      end
     end
   end
 
-  ########################################
-  # Create a pull request for the update #
-  ########################################
-  pr_creator = Dependabot::PullRequestCreator.new(
-    source: source,
-    base_commit: commit,
-    dependencies: updated_deps,
-    files: updated_files,
-    credentials: credentials,
-    label_language: true,
-    assignees: assignees
-  )
-  pull_request = pr_creator.create
-  puts " submitted"
+  if conflict_merge_request_commit_id && conflict_merge_request_id
+    ########################################
+    # Update merge request with conflict   #
+    ########################################
+    pr_updater = Dependabot::PullRequestUpdater.new(
+      source: source,
+      base_commit: commit,
+      old_commit: conflict_merge_request_commit_id,
+      files: updated_files,
+      credentials: credentials,
+      pull_request_number: conflict_merge_request_id,
+    )
+    pr_updater.update
+    puts " merge request ##{conflict_merge_request_id} updated"
+  else
+    ########################################
+    # Create a pull request for the update #
+    ########################################
+    pr_creator = Dependabot::PullRequestCreator.new(
+      source: source,
+      base_commit: commit,
+      dependencies: updated_deps,
+      files: updated_files,
+      credentials: credentials,
+      label_language: true,
+      assignees: assignees
+    )
+    pull_request = pr_creator.create
+    puts " submitted"
+
+  end
 
   opened_merge_requests += 1
-
   next unless pull_request
 
   # Auto approve Gitlab merge request with the same user.

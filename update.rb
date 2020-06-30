@@ -164,7 +164,7 @@ dependencies.select(&:top_level?).each do |dep|
         gitlab_client.delete_branch(repo_name, omr.source_branch)
         puts " closed merge request ##{omr.iid}"
       end
-      if ["cannot_be_merged", "checking"].include? omr.merge_status
+      if omr.merge_status != "can_be_merged"
         # ignore merge request manually touched
         next if gitlab_client.merge_request_commits(repo_name, omr.iid).length > 1
         # keep merge request

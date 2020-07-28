@@ -130,7 +130,7 @@ dependencies.select(&:top_level?).each do |dep|
   #####################################
   # Generate updated dependency files #
   #####################################
-  print "  - Updating #{dep.name} (from #{dep.version})…"
+  print "\n  - Updating #{dep.name} (from #{dep.version})…"
   updater = Dependabot::FileUpdaters.for_package_manager(package_manager).new(
     dependencies: updated_deps,
     dependency_files: files,
@@ -163,6 +163,7 @@ dependencies.select(&:top_level?).each do |dep|
         gitlab_client.update_merge_request(repo_name, omr.iid, {state_event: "close"})
         gitlab_client.delete_branch(repo_name, omr.source_branch)
         puts " closed merge request ##{omr.iid}"
+        next
       end
       if omr.merge_status != "can_be_merged"
         # ignore merge request manually touched
@@ -175,6 +176,7 @@ dependencies.select(&:top_level?).each do |dep|
     end
   end
 
+  merge_request_id = nil
   if conflict_merge_request_commit_id && conflict_merge_request_id
     ########################################
     # Update merge request with conflict   #
@@ -188,7 +190,8 @@ dependencies.select(&:top_level?).each do |dep|
       pull_request_number: conflict_merge_request_id,
     )
     pr_updater.update
-    puts " merge request ##{conflict_merge_request_id} updated"
+    merge_request_id = conflict_merge_request_id
+    print " merge request ##{conflict_merge_request_id} updated"
   else
     ########################################
     # Create a pull request for the update #
@@ -203,30 +206,39 @@ dependencies.select(&:top_level?).each do |dep|
       assignees: assignees
     )
     pull_request = pr_creator.create
-    puts " submitted"
-
+    merge_request_id = pull_request.iid if pull_request
+    print " submitted"
   end
 
   opened_merge_requests += 1
-  next unless pull_request
+  next unless merge_request_id
 
   # Auto approve Gitlab merge request with the same user.
   if ENV["DEPENDABOT_GITLAB_APPROVE_MERGE"]
-    g.approve_merge_request(source.repo, pull_request.iid)
-    puts " approved"
+    begin
+      gitlab_client.approve_merge_request(source.repo, merge_request_id)
+    rescue Exception => e
+      print "\nError when trying to approve the merge request\n#{e.message}"
+    else
+      print " / approved"
+    end
   end
 
   # Enable GitLab "merge when pipeline succeeds" feature.
   # Merge requests created and successfully tested will be merge automatically.
   if ENV["DEPENDABOT_GITLAB_AUTO_MERGE"]
-    g.accept_merge_request(
-      source.repo,
-      pull_request.iid,
-      merge_when_pipeline_succeeds: true,
-      should_remove_source_branch: true
-    )
-
-    puts " set to be accepted"
+    begin
+      gitlab_client.accept_merge_request(
+        source.repo,
+        merge_request_id,
+        merge_when_pipeline_succeeds: true,
+        should_remove_source_branch: true
+      )
+    rescue Exception => e
+      print "\nError when trying to merge the merge request\n#{e.message}"
+    else
+      print " / set to be accepted"
+    end
   end
 end
 

@@ -147,12 +147,18 @@ dependencies.select(&:top_level?).each do |dep|
     credentials: credentials
   )
 
-  opened_merge_requests_for_this_dep = gitlab_client.merge_requests(
-    repo_name,
-    state: "opened",
-    search: dep.name,
-    in: "title",
-  )
+  opened_merge_requests_for_this_dep = []
+  loop do
+    opened_merge_requests_for_this_dep = gitlab_client.merge_requests(
+      repo_name,
+      state: "opened",
+      search: dep.name,
+      in: "title",
+      with_merge_status_recheck: true
+    )
+    break unless opened_merge_requests_for_this_dep.map(&:merge_status).include?('checking')
+  end
+
   conflict_merge_request_commit_id = nil
   conflict_merge_request_id = nil
   opened_merge_requests_for_this_dep.each do |omr|

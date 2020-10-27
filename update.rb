@@ -152,7 +152,7 @@ dependencies.select(&:top_level?).each do |dep|
     opened_merge_requests_for_this_dep = gitlab_client.merge_requests(
       repo_name,
       state: "opened",
-      search: dep.name,
+      search: "\"Bump #{dep.name}\"",
       in: "title",
       with_merge_status_recheck: true
     )

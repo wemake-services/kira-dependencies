@@ -253,7 +253,7 @@ dependencies.select(&:top_level?).each do |dep|
         print " / set to be accepted"
       end
     end
-  rescue Exception => e
+  rescue StandardError => e
     raise e if fail_on_exception
     puts "error updating #{dep.name} (continuing)"
     puts e.full_message

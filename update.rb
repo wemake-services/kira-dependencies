@@ -48,6 +48,10 @@ directory = ENV["DEPENDABOT_DIRECTORY"] || "/"
 # https://github.com/wemake-services/kira-dependencies/issues/39
 update_strategy = ENV['DEPENDABOT_UPDATE_STRATEGY']&.to_sym || nil
 
+# See description of requirements here:
+# https://github.com/dependabot/dependabot-core/issues/600#issuecomment-407808103
+excluded_requirements = ENV['DEPENDABOT_EXCLUDE_REQUIREMENTS_TO_UNLOCK']&.split(" ")&.map(&:to_sym) || []
+
 # Assignee to be set for this merge request.
 # Works best with marge-bot:
 # https://github.com/smarkets/marge-bot
@@ -113,11 +117,11 @@ dependencies.select(&:top_level?).each do |dep|
 
   requirements_to_unlock =
     if !checker.requirements_unlocked_or_can_be?
-      if checker.can_update?(requirements_to_unlock: :none) then :none
+      if !excluded_requirements.include?(:none) && checker.can_update?(requirements_to_unlock: :none) then :none
       else :update_not_possible
       end
-    elsif checker.can_update?(requirements_to_unlock: :own) then :own
-    elsif checker.can_update?(requirements_to_unlock: :all) then :all
+    elsif !excluded_requirements.include?(:own) && checker.can_update?(requirements_to_unlock: :own) then :own
+    elsif !excluded_requirements.include?(:all) && checker.can_update?(requirements_to_unlock: :all) then :all
     else :update_not_possible
     end
 

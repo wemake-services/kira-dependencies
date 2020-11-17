@@ -97,158 +97,162 @@ parser = Dependabot::FileParsers.for_package_manager(package_manager).new(
 dependencies = parser.parse
 opened_merge_requests = 0
 dependencies.select(&:top_level?).each do |dep|
+  begin
+    if ENV["DEPENDABOT_MAX_MERGE_REQUESTS"] && opened_merge_requests >= ENV["DEPENDABOT_MAX_MERGE_REQUESTS"].to_i
+      puts "Opened merge request limit reached!"
+      break
+    end
 
-  if ENV["DEPENDABOT_MAX_MERGE_REQUESTS"] && opened_merge_requests >= ENV["DEPENDABOT_MAX_MERGE_REQUESTS"].to_i
-    puts "Opened merge request limit reached!"
-    break
-  end
+    #########################################
+    # Get update details for the dependency #
+    #########################################
+    checker = Dependabot::UpdateCheckers.for_package_manager(package_manager).new(
+      dependency: dep,
+      dependency_files: files,
+      credentials: credentials,
+      requirements_update_strategy: update_strategy
+    )
 
-  #########################################
-  # Get update details for the dependency #
-  #########################################
-  checker = Dependabot::UpdateCheckers.for_package_manager(package_manager).new(
-    dependency: dep,
-    dependency_files: files,
-    credentials: credentials,
-    requirements_update_strategy: update_strategy
-  )
+    next if checker.up_to_date?
 
-  next if checker.up_to_date?
-
-  requirements_to_unlock =
-    if !checker.requirements_unlocked_or_can_be?
-      if !excluded_requirements.include?(:none) && checker.can_update?(requirements_to_unlock: :none) then :none
+    requirements_to_unlock =
+      if !checker.requirements_unlocked_or_can_be?
+        if !excluded_requirements.include?(:none) && checker.can_update?(requirements_to_unlock: :none) then :none
+        else :update_not_possible
+        end
+      elsif !excluded_requirements.include?(:own) && checker.can_update?(requirements_to_unlock: :own) then :own
+      elsif !excluded_requirements.include?(:all) && checker.can_update?(requirements_to_unlock: :all) then :all
       else :update_not_possible
       end
-    elsif !excluded_requirements.include?(:own) && checker.can_update?(requirements_to_unlock: :own) then :own
-    elsif !excluded_requirements.include?(:all) && checker.can_update?(requirements_to_unlock: :all) then :all
-    else :update_not_possible
-    end
 
-  next if requirements_to_unlock == :update_not_possible
+    next if requirements_to_unlock == :update_not_possible
 
-  updated_deps = checker.updated_dependencies(
-    requirements_to_unlock: requirements_to_unlock
-  )
-
-  #####################################
-  # Generate updated dependency files #
-  #####################################
-  print "\n  - Updating #{dep.name} (from #{dep.version})…"
-  updater = Dependabot::FileUpdaters.for_package_manager(package_manager).new(
-    dependencies: updated_deps,
-    dependency_files: files,
-    credentials: credentials,
-  )
-
-  updated_files = updater.updated_dependency_files
-
-  #####################################
-  # Find out if a MR already exists   #
-  #####################################
-  gitlab_client = Dependabot::Clients::GitlabWithRetries.for_source(
-    source: source,
-    credentials: credentials
-  )
-
-  opened_merge_requests_for_this_dep = []
-  loop do
-    opened_merge_requests_for_this_dep = gitlab_client.merge_requests(
-      repo_name,
-      state: "opened",
-      search: "\"Bump #{dep.name}\"",
-      in: "title",
-      with_merge_status_recheck: true
+    updated_deps = checker.updated_dependencies(
+      requirements_to_unlock: requirements_to_unlock
     )
-    break unless opened_merge_requests_for_this_dep.map(&:merge_status).include?('checking')
-  end
 
-  conflict_merge_request_commit_id = nil
-  conflict_merge_request_id = nil
-  opened_merge_requests_for_this_dep.each do |omr|
-    title = omr.title
-    if title.include?(dep.name) && title.include?(dep.version)
-      if !title.include?(updated_deps[0].version)
-        # close old version MR
-        gitlab_client.update_merge_request(repo_name, omr.iid, {state_event: "close"})
-        gitlab_client.delete_branch(repo_name, omr.source_branch)
-        puts " closed merge request ##{omr.iid}"
-        next
-      end
-      if omr.merge_status != "can_be_merged"
-        # ignore merge request manually touched
-        next if gitlab_client.merge_request_commits(repo_name, omr.iid).length > 1
-        # keep merge request
-        conflict_merge_request_commit_id = omr.sha
-        conflict_merge_request_id = omr.iid
-        break
-      end
-    end
-  end
-
-  merge_request_id = nil
-  if conflict_merge_request_commit_id && conflict_merge_request_id
-    ########################################
-    # Update merge request with conflict   #
-    ########################################
-    pr_updater = Dependabot::PullRequestUpdater.new(
-      source: source,
-      base_commit: commit,
-      old_commit: conflict_merge_request_commit_id,
-      files: updated_files,
-      credentials: credentials,
-      pull_request_number: conflict_merge_request_id,
-    )
-    pr_updater.update
-    merge_request_id = conflict_merge_request_id
-    print " merge request ##{conflict_merge_request_id} updated"
-  else
-    ########################################
-    # Create a pull request for the update #
-    ########################################
-    pr_creator = Dependabot::PullRequestCreator.new(
-      source: source,
-      base_commit: commit,
+    #####################################
+    # Generate updated dependency files #
+    #####################################
+    print "\n  - Updating #{dep.name} (from #{dep.version})…"
+    updater = Dependabot::FileUpdaters.for_package_manager(package_manager).new(
       dependencies: updated_deps,
-      files: updated_files,
+      dependency_files: files,
       credentials: credentials,
-      label_language: true,
-      assignees: assignees
     )
-    pull_request = pr_creator.create
-    merge_request_id = pull_request.iid if pull_request
-    print " submitted"
-  end
 
-  opened_merge_requests += 1
-  next unless merge_request_id
+    updated_files = updater.updated_dependency_files
 
-  # Auto approve Gitlab merge request with the same user.
-  if ENV["DEPENDABOT_GITLAB_APPROVE_MERGE"]
-    begin
-      gitlab_client.approve_merge_request(source.repo, merge_request_id)
-    rescue Exception => e
-      print "\nError when trying to approve the merge request\n#{e.message}"
-    else
-      print " / approved"
-    end
-  end
+    #####################################
+    # Find out if a MR already exists   #
+    #####################################
+    gitlab_client = Dependabot::Clients::GitlabWithRetries.for_source(
+      source: source,
+      credentials: credentials
+    )
 
-  # Enable GitLab "merge when pipeline succeeds" feature.
-  # Merge requests created and successfully tested will be merge automatically.
-  if ENV["DEPENDABOT_GITLAB_AUTO_MERGE"]
-    begin
-      gitlab_client.accept_merge_request(
-        source.repo,
-        merge_request_id,
-        merge_when_pipeline_succeeds: true,
-        should_remove_source_branch: true
+    opened_merge_requests_for_this_dep = []
+    loop do
+      opened_merge_requests_for_this_dep = gitlab_client.merge_requests(
+        repo_name,
+        state: "opened",
+        search: "\"Bump #{dep.name}\"",
+        in: "title",
+        with_merge_status_recheck: true
       )
-    rescue Exception => e
-      print "\nError when trying to merge the merge request\n#{e.message}"
-    else
-      print " / set to be accepted"
+      break unless opened_merge_requests_for_this_dep.map(&:merge_status).include?('checking')
     end
+
+    conflict_merge_request_commit_id = nil
+    conflict_merge_request_id = nil
+    opened_merge_requests_for_this_dep.each do |omr|
+      title = omr.title
+      if title.include?(dep.name) && title.include?(dep.version)
+        if !title.include?(updated_deps[0].version)
+          # close old version MR
+          gitlab_client.update_merge_request(repo_name, omr.iid, { state_event: "close" })
+          gitlab_client.delete_branch(repo_name, omr.source_branch)
+          puts " closed merge request ##{omr.iid}"
+          next
+        end
+        if omr.merge_status != "can_be_merged"
+          # ignore merge request manually touched
+          next if gitlab_client.merge_request_commits(repo_name, omr.iid).length > 1
+          # keep merge request
+          conflict_merge_request_commit_id = omr.sha
+          conflict_merge_request_id = omr.iid
+          break
+        end
+      end
+    end
+
+    merge_request_id = nil
+    if conflict_merge_request_commit_id && conflict_merge_request_id
+      ########################################
+      # Update merge request with conflict   #
+      ########################################
+      pr_updater = Dependabot::PullRequestUpdater.new(
+        source: source,
+        base_commit: commit,
+        old_commit: conflict_merge_request_commit_id,
+        files: updated_files,
+        credentials: credentials,
+        pull_request_number: conflict_merge_request_id,
+      )
+      pr_updater.update
+      merge_request_id = conflict_merge_request_id
+      print " merge request ##{conflict_merge_request_id} updated"
+    else
+      ########################################
+      # Create a pull request for the update #
+      ########################################
+      pr_creator = Dependabot::PullRequestCreator.new(
+        source: source,
+        base_commit: commit,
+        dependencies: updated_deps,
+        files: updated_files,
+        credentials: credentials,
+        label_language: true,
+        assignees: assignees
+      )
+      pull_request = pr_creator.create
+      merge_request_id = pull_request.iid if pull_request
+      print " submitted"
+    end
+
+    opened_merge_requests += 1
+    next unless merge_request_id
+
+    # Auto approve Gitlab merge request with the same user.
+    if ENV["DEPENDABOT_GITLAB_APPROVE_MERGE"]
+      begin
+        gitlab_client.approve_merge_request(source.repo, merge_request_id)
+      rescue Exception => e
+        print "\nError when trying to approve the merge request\n#{e.message}"
+      else
+        print " / approved"
+      end
+    end
+
+    # Enable GitLab "merge when pipeline succeeds" feature.
+    # Merge requests created and successfully tested will be merge automatically.
+    if ENV["DEPENDABOT_GITLAB_AUTO_MERGE"]
+      begin
+        gitlab_client.accept_merge_request(
+          source.repo,
+          merge_request_id,
+          merge_when_pipeline_succeeds: true,
+          should_remove_source_branch: true
+        )
+      rescue Exception => e
+        print "\nError when trying to merge the merge request\n#{e.message}"
+      else
+        print " / set to be accepted"
+      end
+    end
+  rescue Exception => e
+    puts "error updating #{dep.name}"
+    puts e.full_message
   end
 end
 

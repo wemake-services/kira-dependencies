@@ -52,6 +52,9 @@ update_strategy = ENV['DEPENDABOT_UPDATE_STRATEGY']&.to_sym || nil
 # https://github.com/dependabot/dependabot-core/issues/600#issuecomment-407808103
 excluded_requirements = ENV['DEPENDABOT_EXCLUDE_REQUIREMENTS_TO_UNLOCK']&.split(" ")&.map(&:to_sym) || []
 
+# stop the job if an exception occurs
+fail_on_exception = ENV['KIRA_FAIL_ON_EXCEPTION'] == "true"
+
 # Assignee to be set for this merge request.
 # Works best with marge-bot:
 # https://github.com/smarkets/marge-bot
@@ -97,12 +100,12 @@ parser = Dependabot::FileParsers.for_package_manager(package_manager).new(
 dependencies = parser.parse
 opened_merge_requests = 0
 dependencies.select(&:top_level?).each do |dep|
-  begin
-    if ENV["DEPENDABOT_MAX_MERGE_REQUESTS"] && opened_merge_requests >= ENV["DEPENDABOT_MAX_MERGE_REQUESTS"].to_i
-      puts "Opened merge request limit reached!"
-      break
-    end
+  if ENV["DEPENDABOT_MAX_MERGE_REQUESTS"] && opened_merge_requests >= ENV["DEPENDABOT_MAX_MERGE_REQUESTS"].to_i
+    puts "Opened merge request limit reached!"
+    break
+  end
 
+  begin
     #########################################
     # Get update details for the dependency #
     #########################################
@@ -251,7 +254,8 @@ dependencies.select(&:top_level?).each do |dep|
       end
     end
   rescue Exception => e
-    puts "error updating #{dep.name}"
+    raise e if fail_on_exception
+    puts "error updating #{dep.name} (continuing)"
     puts e.full_message
   end
 end

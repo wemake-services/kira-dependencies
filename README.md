@@ -43,3 +43,4 @@ This configuration is best to be setup inside CI schedule's environment.
 
 - `DEPENDABOT_UPDATE_STRATEGY` - (optional) change how each package manager updates your dependency versions, see list of allowed values [here](https://github.com/wemake-services/kira-dependencies/issues/39)
 - `DEPENDABOT_EXCLUDE_REQUIREMENTS_TO_UNLOCK` - (optional) exclude certain dependency updates requirements for each package manager, see list of allowed values [here](https://github.com/dependabot/dependabot-core/issues/600#issuecomment-407808103). Useful if you have lots of dependencies and the update script too slow. Example: `own all` to only use the `none` version requirement
+- `KIRA_FAIL_ON_EXCEPTION` - (optional) setup to `true` if you want the job to fail if an exception occurs

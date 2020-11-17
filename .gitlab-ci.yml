@@ -19,6 +19,7 @@
   image: dependabot/dependabot-core
   variables:
     PACKAGE_MANAGER: $CI_JOB_NAME
+  retry: 1
   before_script:
     - bundle install -j $(nproc) --path vendor
   script: bundle exec ruby ./update.rb

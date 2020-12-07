@@ -94,16 +94,19 @@ puts "Parsing dependencies information"
 parser = Dependabot::FileParsers.for_package_manager(package_manager).new(
   dependency_files: files,
   source: source,
-  credentials: credentials,
+  credentials: credentials
 )
+
+gitlab_client = Dependabot::Clients::GitlabWithRetries.for_source(
+  source: source,
+  credentials: credentials
+)
+
+data = {}
 
 dependencies = parser.parse
 opened_merge_requests = 0
 dependencies.select(&:top_level?).each do |dep|
-  if ENV["DEPENDABOT_MAX_MERGE_REQUESTS"] && opened_merge_requests >= ENV["DEPENDABOT_MAX_MERGE_REQUESTS"].to_i
-    puts "Opened merge request limit reached!"
-    break
-  end
 
   begin
     #########################################
@@ -117,6 +120,32 @@ dependencies.select(&:top_level?).each do |dep|
     )
 
     next if checker.up_to_date?
+    #####################################
+    # Find out if a MR already exists   #
+    #####################################
+    opened_merge_requests_for_this_dep = []
+    loop do
+      opened_merge_requests_for_this_dep = gitlab_client.merge_requests(
+        repo_name,
+        state: "opened",
+        search: "\"Bump #{dep.name}\"",
+        in: "title",
+        with_merge_status_recheck: true
+      )
+      break unless opened_merge_requests_for_this_dep.map(&:merge_status).include?('checking')
+    end
+
+    data[checker.dependency.name] = {
+        current_version: checker.dependency.version,
+        next_version: checker.preferred_resolvable_version.to_s,
+        mr_urls: opened_merge_requests_for_this_dep.map(&:web_url)
+      }
+
+    if ENV['DEPENDABOT_MAX_MERGE_REQUESTS'] && opened_merge_requests >= ENV['DEPENDABOT_MAX_MERGE_REQUESTS'].to_i
+      puts 'Opened merge request limit reached!'
+      break unless ENV['KIRA_DEPENDENCIES_DASHBOARD']
+      next
+    end
 
     requirements_to_unlock =
       if !checker.requirements_unlocked_or_can_be?
@@ -145,26 +174,6 @@ dependencies.select(&:top_level?).each do |dep|
     )
 
     updated_files = updater.updated_dependency_files
-
-    #####################################
-    # Find out if a MR already exists   #
-    #####################################
-    gitlab_client = Dependabot::Clients::GitlabWithRetries.for_source(
-      source: source,
-      credentials: credentials
-    )
-
-    opened_merge_requests_for_this_dep = []
-    loop do
-      opened_merge_requests_for_this_dep = gitlab_client.merge_requests(
-        repo_name,
-        state: "opened",
-        search: "\"Bump #{dep.name}\"",
-        in: "title",
-        with_merge_status_recheck: true
-      )
-      break unless opened_merge_requests_for_this_dep.map(&:merge_status).include?('checking')
-    end
 
     conflict_merge_request_commit_id = nil
     conflict_merge_request_id = nil
@@ -219,7 +228,12 @@ dependencies.select(&:top_level?).each do |dep|
         assignees: assignees
       )
       pull_request = pr_creator.create
-      merge_request_id = pull_request.iid if pull_request
+      if pull_request
+        merge_request_id = pull_request.iid
+        mr_urls = data[checker.dependency.name][:mr_urls] << pull_request.web_url
+        data[checker.dependency.name][:mr_urls] = mr_urls.uniq
+      end
+
       print " submitted"
     end
 
@@ -260,4 +274,39 @@ dependencies.select(&:top_level?).each do |dep|
   end
 end
 
-puts "Done"
+if ENV["KIRA_DEPENDENCIES_DASHBOARD"]
+  language_name = Dependabot::PullRequestCreator::Labeler.label_details_for_package_manager(package_manager)[:name]
+
+  dashboard_labels = [
+    Dependabot::PullRequestCreator::Labeler::DEFAULT_DEPENDENCIES_LABEL,
+    language_name
+  ]
+
+  dashboard_title = "Dependency Dashboard #{language_name}"
+  dashboard_content= <<-MARKDOWN
+  #{data.count} of #{dependencies.select(&:top_level?).count} #{package_manager} dependencies are out of date.
+
+  | name | current version | next version | merge request |
+  | ---- | --------------- | ------------ | ------------- |
+  #{data.map { |name, values| "| #{name} | #{values[:current_version]} | #{values[:next_version]} | #{values[:mr_urls].map {|url| "[MR](#{url})" }.join(', ')}" }.join("\n")}
+  MARKDOWN
+
+  dashboard_issue = gitlab_client.issues(
+    repo_name,
+    state: 'opened',
+    search: dashboard_title,
+    in: 'title',
+    labels: dashboard_labels
+  ).first
+
+  if dashboard_issue
+    gitlab_client.edit_issue(repo_name, dashboard_issue.iid, description: dashboard_content)
+  else
+    gitlab_client.create_issue(repo_name, dashboard_title, {
+      description: dashboard_content,
+      labels: dashboard_labels
+    })
+  end
+end
+
+puts 'Done'

@@ -128,10 +128,10 @@ dependencies.select(&:top_level?).each do |dep|
       opened_merge_requests_for_this_dep = gitlab_client.merge_requests(
         repo_name,
         state: "opened",
-        search: "\"Bump #{dep.name}\"",
+        search: "Bump \" #{dep.name}\"",
         in: "title",
         with_merge_status_recheck: true
-      )
+      ).select { |mr| mr.title[/#{dep.name}(\s|,)/] }
       break unless opened_merge_requests_for_this_dep.map(&:merge_status).include?('checking')
     end
 

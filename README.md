@@ -38,6 +38,7 @@ This configuration is best to be setup inside CI schedule's environment.
 - `DEPENDABOT_GITLAB_AUTO_MERGE` - (optional) setup to `true` if you want to auto merge this request
 - `DEPENDABOT_MAX_MERGE_REQUESTS` - (optional) setup the number of max openened merge requests you want.
 - `DEPENDABOT_EXTRA_CREDENTIALS` - (optional) JSON of extra credential config, for example a private registry authentication (For example FontAwesome Pro: `[{"type":"npm_registry","token":"<redacted>","registry":"npm.fontawesome.com"}]`)
+- `DEPENDABOT_IGNORED_VERSIONS` - (optional) JSON of versions which should be ignored during update. The expected format is `{"vendor/package": [">0.1.0", ">0.2.0"]}`. It mirrors functionality of [`ignored_updates`](https://dependabot.com/docs/config-file/#ignored_updates) in dependabot.
 
 ### Per package manager
 

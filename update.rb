@@ -38,6 +38,13 @@ unless json_credentials.to_s.strip.empty?
   credentials.push(*json_credentials)
 end
 
+# expected format is {"vendor/package": [">0.1.0", ">0.2.0"]}
+ignored_versions_json = ENV["DEPENDABOT_IGNORED_VERSIONS"] || ""
+ignored_versions = {}
+unless ignored_versions_json.to_s.strip.empty?
+  ignored_versions = JSON.parse(ignored_versions_json)
+end
+
 # Full name of the repo you want to create pull requests for.
 repo_name = ENV["DEPENDABOT_PROJECT_PATH"] # namespace/project
 
@@ -106,6 +113,7 @@ dependencies.select(&:top_level?).each do |dep|
   end
 
   begin
+
     #########################################
     # Get update details for the dependency #
     #########################################
@@ -113,7 +121,8 @@ dependencies.select(&:top_level?).each do |dep|
       dependency: dep,
       dependency_files: files,
       credentials: credentials,
-      requirements_update_strategy: update_strategy
+      requirements_update_strategy: update_strategy,
+      ignored_versions: ignored_versions[dep.name] || []
     )
 
     next if checker.up_to_date?

@@ -21,7 +21,8 @@
     PACKAGE_MANAGER: $CI_JOB_NAME
   retry: 1
   before_script:
-    - bundle install -j $(nproc) --path vendor
+    - bundle config set --local path 'vendor'
+    - bundle install -j $(nproc)
   script: bundle exec ruby ./update.rb
   cache:
     paths:

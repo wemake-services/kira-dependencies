@@ -3,4 +3,4 @@
 ruby "2.7.6"
 source "https://rubygems.org"
 
-gem "dependabot-omnibus", "~> 0.202.0"
+gem "dependabot-omnibus", "~> 0.204.0"

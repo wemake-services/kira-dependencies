@@ -164,15 +164,29 @@ dependencies.select(&:top_level?).each do |dep|
     )
 
     opened_merge_requests_for_this_dep = []
+    # Ensures that at most 20 requests are sent to gitlab before ignoring merge_status as MR is stuck in checking state
+    # See https://gitlab.com/gitlab-org/gitlab/-/issues/263390
+    counter = 0
     loop do
       opened_merge_requests_for_this_dep = gitlab_client.merge_requests(
         repo_name,
         state: "opened",
-        search: "\"Bump #{dep.name}\"",
+        search: "\"Bump #{dep.name} \"",
         in: "title",
-        with_merge_status_recheck: true
+        with_merge_status_recheck: counter == 0
       )
-      break unless opened_merge_requests_for_this_dep.map(&:merge_status).include?('checking')
+      
+      if counter != 0
+        # Sleep 500ms to prevent too much requests sent to server
+        sleep 0.5
+      end
+      counter += 1
+      shouldRetry = opened_merge_requests_for_this_dep.map(&:merge_status).include?('checking')
+      if counter == 20
+        print "\n  - Merge request for {dep.name} is stuck in checking state"
+        shouldRetry = false
+      end
+      break unless shouldRetry
     end
 
     conflict_merge_request_commit_id = nil

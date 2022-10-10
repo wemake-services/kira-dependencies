@@ -1,8 +1,11 @@
-name: Docker
+name: test
 
 on:
-    push:
-    pull_request:
+  push:
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
 
 jobs:
     build:

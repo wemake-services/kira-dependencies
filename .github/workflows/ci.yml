@@ -1,0 +1,15 @@
+name: Docker
+
+on:
+    push:
+    pull_request:
+
+jobs:
+    build:
+        name: CI
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v3
+            - name: Install deps
+              run: docker run --rm -v "${PWD}:/app" -w /app dependabot/dependabot-core sh -c "bundle config set --local path 'vendor' && bundle install -j \$(nproc)"

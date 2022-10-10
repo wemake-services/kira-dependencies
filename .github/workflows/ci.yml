@@ -11,5 +11,7 @@ jobs:
         steps:
             - name: Checkout
               uses: actions/checkout@v3
+            - name: Fix permissions
+              run: mkdir .bundle && chmod 0777 .bundle
             - name: Install deps
               run: docker run --rm -v "${PWD}:/app" -w /app dependabot/dependabot-core sh -c "bundle config set --local path 'vendor' && bundle install -j \$(nproc)"

@@ -16,7 +16,7 @@
 # https://docs.gitlab.com/ee/ci/yaml/
 
 .dependabot:
-  image: dependabot/dependabot-core
+  image: ghcr.io/dependabot/dependabot-updater-$PACKAGE_MANAGER
   variables:
     PACKAGE_MANAGER: $CI_JOB_NAME
   retry: 1
